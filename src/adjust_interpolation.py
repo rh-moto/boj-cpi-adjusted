@@ -22,11 +22,15 @@ import pandas as pd
 
 
 def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
-    """携帯通信料の調整（恒久的レベルシフト除去）
+    """携帯通信料の調整（保合＋前月比延長方式）
 
-    急落前（2021-03: 99.4）と安定後（2022-01: 47.0）の段差を:
-    1. 過渡期は線形補間
-    2. 安定後は恒久的に加算
+    1. 急落前（〜2021-03）: 実績値そのまま
+    2. 急落期間（2021-04〜2021-12）: 急落前水準で保合（横ばい）
+    3. 安定後（2022-01〜）: 実績の前月比で延長
+       adjusted[t] = adjusted[t-1] × actual[t] / actual[t-1]
+
+    恒久的な固定段差加算ではなく、安定後の自然な価格変動を
+    調整済水準からの前月比で反映する。
     """
     adjusted = cpi_index.copy()
     all_months = list(cpi_index.index)
@@ -37,28 +41,20 @@ def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
         return adjusted
 
     val_start = cpi_index[start_ym]  # 急落前水準
-    val_end = cpi_index[end_ym]      # 安定後水準
-    step = val_start - val_end        # 段差（正値）
-
     i_start = all_months.index(start_ym)
     i_end = all_months.index(end_ym)
-    n_months = i_end - i_start
 
     for i in range(len(all_months)):
-        ym = all_months[i]
-        if ym <= start_ym:
-            # 急落前: 調整なし
+        if i <= i_start:
+            # 急落前: 実績値
             pass
-        elif i < i_end:
-            # 過渡期: 線形補間（急落前水準から段差加算後の安定水準へスムーズに移行）
-            t = (i - i_start) / n_months
-            # 補間: 急落前水準から、安定後+段差の水準へスムーズに移行
-            target_start = val_start
-            target_end = val_end + step
-            adjusted.iloc[i] = target_start + (target_end - target_start) * t
+        elif i <= i_end:
+            # 急落期間: 保合（急落前水準を維持）
+            adjusted.iloc[i] = val_start
         else:
-            # 安定後: 段差を恒久的に加算
-            adjusted.iloc[i] = cpi_index.iloc[i] + step
+            # 安定後: 前月比で延長
+            mom = cpi_index.iloc[i] / cpi_index.iloc[i - 1]
+            adjusted.iloc[i] = adjusted.iloc[i - 1] * mom
 
     return adjusted
 
