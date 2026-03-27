@@ -38,7 +38,10 @@ def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
 
     val_start = cpi_index[start_ym]  # 急落前水準
     val_end = cpi_index[end_ym]      # 安定後水準
-    step = val_start - val_end        # 段差（正値）
+    full_step = val_start - val_end   # 段差（正値）
+    # 急落の全額が政策由来ではなく、一部は自然な市場競争による値下げ。
+    # 政策寄与分を9割と推定。
+    step = full_step * 0.9
 
     i_start = all_months.index(start_ym)
     i_end = all_months.index(end_ym)
@@ -52,9 +55,9 @@ def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
         elif i < i_end:
             # 過渡期: 線形補間（急落前水準から段差加算後の安定水準へスムーズに移行）
             t = (i - i_start) / n_months
-            # 補間: 急落前水準から、(実績+段差)の水準へ
+            # 補間: 急落前水準から、安定後+段差の水準へスムーズに移行
             target_start = val_start
-            target_end = val_end + step  # = val_start（段差加算後は急落前と同水準）
+            target_end = val_end + step
             adjusted.iloc[i] = target_start + (target_end - target_start) * t
         else:
             # 安定後: 段差を恒久的に加算
