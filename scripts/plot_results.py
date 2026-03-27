@@ -17,6 +17,7 @@ from src.fetch_boj import parse_boj
 from src.item_master import load_item_master
 from src.aggregate import compute_weighted_index, compute_yoy, get_official_series
 from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
+from src.adjust_kerosene import compute_adjusted_index as adjust_kerosene
 from src.adjust_energy import compute_adjusted_index as adjust_energy
 from src.adjust_education import get_all_education_adjusted
 from src.adjust_interpolation import adjust_mobile, adjust_hotel
@@ -35,6 +36,7 @@ def build_adjusted_indices():
 
     indices_adj = indices.copy()
     indices_adj["7301"] = adjust_gasoline(indices["7301"])
+    indices_adj["3701"] = adjust_kerosene(indices["3701"])
     indices_adj["3500"] = adjust_energy(indices["3500"], "electricity")
     indices_adj["3600"] = adjust_energy(indices["3600"], "gas")
     for code, adj in get_all_education_adjusted(indices).items():
