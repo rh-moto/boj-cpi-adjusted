@@ -16,6 +16,7 @@ from src.fetch_cpi import parse_cpi_csv, get_fixed_weights
 from src.fetch_boj import parse_boj
 from src.item_master import load_item_master
 from src.aggregate import compute_weighted_index, compute_yoy, get_official_series
+from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
 from src.adjust_energy import compute_adjusted_index as adjust_energy
 from src.adjust_education import get_all_education_adjusted
 from src.adjust_interpolation import adjust_mobile, adjust_hotel
@@ -32,28 +33,8 @@ def build_adjusted_indices():
     master = load_item_master()
     boj = parse_boj()
 
-    # ガソリン
-    P0_gas = 134.5
-    subsidy_df = pd.read_csv("data/policy_params/gasoline_subsidy.csv", parse_dates=["date_start", "date_end"])
-    daily_records = []
-    for _, row in subsidy_df.iterrows():
-        dates = pd.date_range(row["date_start"], min(row["date_end"], pd.Timestamp("2026-02-28")), freq="D")
-        for d in dates:
-            daily_records.append({"date": d, "subsidy": row["subsidy_yen_per_liter"]})
-    daily = pd.DataFrame(daily_records)
-    daily["year_month"] = daily["date"].dt.strftime("%Y-%m")
-    monthly_gas_sub = daily.groupby("year_month")["subsidy"].mean()
-
-    gas_adjusted = indices["7301"].copy()
-    TAX_RESTORE = 25.1 * 1.1
-    for ym in gas_adjusted.index:
-        sub = monthly_gas_sub.get(ym, 0)
-        gas_adjusted[ym] = indices.loc[ym, "7301"] + sub / P0_gas * 100
-        if ym >= "2026-01":
-            gas_adjusted[ym] += TAX_RESTORE / P0_gas * 100
-
     indices_adj = indices.copy()
-    indices_adj["7301"] = gas_adjusted
+    indices_adj["7301"] = adjust_gasoline(indices["7301"])
     indices_adj["3500"] = adjust_energy(indices["3500"], "electricity")
     indices_adj["3600"] = adjust_energy(indices["3600"], "gas")
     for code, adj in get_all_education_adjusted(indices).items():
