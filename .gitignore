@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+.ruff_cache/
+.pytest_cache/
+
+# 大容量データファイル（生データはgit管理しない）
+data/soumu/*.xlsx
+data/soumu/*.xls
+data/meti/*.xlsx
+data/boj/*.xlsx
+
+# 出力（PNGは追跡する）
+output/*.csv
+output/*.xlsx
