@@ -10,6 +10,7 @@ build/
 # 大容量データファイル（生データはgit管理しない）
 data/soumu/*.xlsx
 data/soumu/*.xls
+data/soumu/*.csv
 data/meti/*.xlsx
 data/boj/*.xlsx
 
