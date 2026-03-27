@@ -22,36 +22,22 @@ import pandas as pd
 
 
 def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
-    """携帯通信料の調整（保合＋固定段差方式）
+    """携帯通信料の調整（全期間保合方式）
 
-    1. 急落前（〜2021-03）: 実績値そのまま
-    2. 2021-04のみ: 急落前水準で保合（段差の吸収）
-    3. 2021-05以降: 固定段差を加算
-       step = 2021-03の水準 - 2021-04の水準
-       adjusted[t] = actual[t] + step
-
-    価格変動は絶対額（円）ベースで効くため、固定段差の加算が正しい。
-    （前月比方式だとパーセント変化が高い水準に適用され過大評価になる）
+    2021-04以降、急落前水準（2021-03）で保合。
+    政策誘導による値下げの全期間を除去する最もシンプルな方式。
     """
     adjusted = cpi_index.copy()
-    all_months = list(cpi_index.index)
 
     start_ym = "2021-03"
-    drop_ym = "2021-04"
-    if start_ym not in all_months or drop_ym not in all_months:
+    if start_ym not in adjusted.index:
         return adjusted
 
-    val_pre = cpi_index[start_ym]    # 急落前水準
-    val_drop = cpi_index[drop_ym]    # 急落直後
-    step = val_pre - val_drop         # 段差
+    val_pre = cpi_index[start_ym]
 
-    i_start = all_months.index(start_ym)
-
-    for i in range(len(all_months)):
-        if i <= i_start:
-            pass
-        else:
-            adjusted.iloc[i] = cpi_index.iloc[i] + step
+    for ym in adjusted.index:
+        if ym > start_ym:
+            adjusted[ym] = val_pre
 
     return adjusted
 
