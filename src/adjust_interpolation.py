@@ -56,30 +56,52 @@ def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
 
 
 def adjust_hotel(cpi_index: pd.Series) -> pd.Series:
-    """宿泊料の調整（一時的な旅行支援の除去）
+    """宿泊料の調整（前年同月トレンド延長方式）
 
-    旅行支援期間（2022-10〜2023-12）の指数に段差を加算。
-    支援開始直前月（2022-09）と支援終了直後月（2024-01）の指数を端点とし、
-    期間中の値を線形補間で置換する。
-    支援終了後は実績値をそのまま使用。
+    旅行支援期間中の指数を、支援前のトレンドで延長した
+    「自然な指数」で置換する。季節パターンが保持される。
+
+    支援期間:
+      2022-10〜2022-12: 40%割引（上限8,000円）
+      2023-01〜2023-06: 20%割引（上限5,000円、断続的）
+
+    推定方法:
+      2022-10〜12: 2021年同月 × (支援前Q1-Q3の平均前年比)
+      2023-01〜06: 2022年同月 × (支援なし月の年率成長)
+      2023-07以降: 実績値（支援終了後）
     """
     adjusted = cpi_index.copy()
-    all_months = list(cpi_index.index)
 
-    start_ym = "2022-09"
-    end_ym = "2024-01"
-    if start_ym not in all_months or end_ym not in all_months:
-        return adjusted
+    # 支援前トレンド: 2021→2022のQ1-Q3平均前年比
+    pre_yoy_list = []
+    for m in range(1, 10):
+        ym22 = f"2022-{m:02d}"
+        ym21 = f"2021-{m:02d}"
+        if ym22 in cpi_index.index and ym21 in cpi_index.index:
+            pre_yoy_list.append(cpi_index[ym22] / cpi_index[ym21] - 1)
+    pre_yoy = sum(pre_yoy_list) / len(pre_yoy_list) if pre_yoy_list else 0
 
-    i_start = all_months.index(start_ym)
-    i_end = all_months.index(end_ym)
-    val_start = cpi_index[start_ym]
-    val_end = cpi_index[end_ym]
-    n_months = i_end - i_start
+    # 2022→2024の年率成長（支援なし月、インバウンド回復を含む）
+    growth_list = []
+    for m in range(1, 10):
+        ym24 = f"2024-{m:02d}"
+        ym22 = f"2022-{m:02d}"
+        if ym24 in cpi_index.index and ym22 in cpi_index.index:
+            growth_list.append((cpi_index[ym24] / cpi_index[ym22]) ** 0.5 - 1)
+    annual_growth = sum(growth_list) / len(growth_list) if growth_list else 0
 
-    # 端点間を線形補間（支援期間のみ）
-    for i in range(i_start + 1, i_end):
-        t = (i - i_start) / n_months
-        adjusted.iloc[i] = val_start + (val_end - val_start) * t
+    # 2022-10〜12: 2021年同月 × (1+支援前トレンド)
+    for m in [10, 11, 12]:
+        ym = f"2022-{m:02d}"
+        prev_ym = f"2021-{m:02d}"
+        if ym in adjusted.index and prev_ym in cpi_index.index:
+            adjusted[ym] = cpi_index[prev_ym] * (1 + pre_yoy)
+
+    # 2023-01〜06: 2022年同月 × (1+年率成長)
+    for m in range(1, 7):
+        ym = f"2023-{m:02d}"
+        prev_ym = f"2022-{m:02d}"
+        if ym in adjusted.index and prev_ym in cpi_index.index:
+            adjusted[ym] = cpi_index[prev_ym] * (1 + annual_growth)
 
     return adjusted
