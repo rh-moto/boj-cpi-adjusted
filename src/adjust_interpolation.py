@@ -22,35 +22,35 @@ import pandas as pd
 
 
 def adjust_mobile(cpi_index: pd.Series) -> pd.Series:
-    """携帯通信料の調整（年度保合＋固定段差方式）
+    """携帯通信料の調整（保合＋60%反映＋固定段差方式）
 
     1. 急落前（〜2021-03）: 実績値そのまま
-    2. 急落年度（2021-04〜2022-03）: 急落前水準で保合
-    3. 2022-04以降: 固定段差を加算
-       step = 2021-03の水準 - 2022-03の水準（年度末時点の段差）
-       adjusted[t] = actual[t] + step
+    2. 2021-04: 急落前水準で保合
+    3. 2021-05〜2022-03: 実績の月次変動の60%を反映
+       （残り40%は自然な市場競争として許容）
+    4. 2022-04以降: 実績の月次変動を100%反映（固定段差）
     """
     adjusted = cpi_index.copy()
     all_months = list(cpi_index.index)
 
     start_ym = "2021-03"
-    end_ym = "2022-03"
-    if start_ym not in all_months or end_ym not in all_months:
+    fy21_end = "2022-03"
+    if start_ym not in all_months:
         return adjusted
 
+    i_start = all_months.index(start_ym)
     val_pre = cpi_index[start_ym]
-    val_end = cpi_index[end_ym]
-    step = val_pre - val_end
 
-    for ym in adjusted.index:
-        if ym <= start_ym:
-            pass
-        elif ym <= end_ym:
-            # 急落年度: 保合
-            adjusted[ym] = val_pre
+    # 2021-04: 保合
+    adjusted.iloc[i_start + 1] = val_pre
+
+    # 2021-05以降
+    for i in range(i_start + 2, len(all_months)):
+        change = cpi_index.iloc[i] - cpi_index.iloc[i - 1]
+        if all_months[i] <= fy21_end:
+            adjusted.iloc[i] = adjusted.iloc[i - 1] + change * 0.6
         else:
-            # 年度明け以降: 固定段差加算
-            adjusted[ym] = cpi_index[ym] + step
+            adjusted.iloc[i] = adjusted.iloc[i - 1] + change * 1.0
 
     return adjusted
 
