@@ -104,13 +104,33 @@ def compute_model_price(
     return basic + energy_charge + renew_charge - discount
 
 
+def compute_p0(usage_kwh: int = DEFAULT_USAGE_KWH) -> float:
+    """2020年平均のモデル月額料金(P₀)を算出"""
+    rates_df = _load_rates()
+    fuel_df = _load_fuel_adj()
+    surcharge_df = _load_renew_surcharge()
+    fuel_dict = dict(zip(fuel_df["year_month"], fuel_df["fuel_adj_with_subsidy"]))
+
+    total = 0
+    for m in range(1, 13):
+        ym = f"2020-{m:02d}"
+        rate = _get_rate_for_month(rates_df, ym)
+        fuel = fuel_dict.get(ym, 0)
+        renew = _get_renew_surcharge(surcharge_df, ym)
+        total += compute_model_price(rate, fuel, renew, usage_kwh)
+    return total / 12
+
+
 def compute_adjusted_index(
     cpi_index: pd.Series,
     usage_kwh: int = DEFAULT_USAGE_KWH,
 ) -> pd.Series:
-    """電気代の調整済CPI指数を算出（モデル価格方式）
+    """電気代の調整済CPI指数を算出（加法方式）
 
-    補助金ありと補助金なしのモデル価格を計算し、その比で調整。
+    モデル由来のP₀で感応度を計算し、補助金の絶対額をCPI指数に加算。
+    比率方式はTEPCO料金と全国平均CPIの乖離で歪むため不採用。
+
+      adjusted = CPI + subsidy_per_kwh × usage / P₀ × 100
 
     Args:
         cpi_index: CPIの電気代指数（月次）
@@ -119,34 +139,16 @@ def compute_adjusted_index(
     Returns:
         調整済CPI指数
     """
-    rates_df = _load_rates()
     fuel_df = _load_fuel_adj()
-    surcharge_df = _load_renew_surcharge()
+    subsidy_dict = dict(zip(fuel_df["year_month"], fuel_df["subsidy_per_kwh"]))
 
-    fuel_dict_with = dict(zip(fuel_df["year_month"], fuel_df["fuel_adj_with_subsidy"]))
-    fuel_dict_without = dict(zip(fuel_df["year_month"], fuel_df["fuel_adj_without_subsidy"]))
+    p0 = compute_p0(usage_kwh)
+    sensitivity = usage_kwh / p0 * 100  # pt per yen/kWh
 
     adjusted = cpi_index.copy()
-
     for ym in cpi_index.index:
-        if ym not in fuel_dict_with or ym not in fuel_dict_without:
-            continue
-
-        fuel_with = fuel_dict_with[ym]
-        fuel_without = fuel_dict_without[ym]
-
-        # 補助金なしの場合と同じなら調整不要
-        if abs(fuel_with - fuel_without) < 0.001:
-            continue
-
-        rate = _get_rate_for_month(rates_df, ym)
-        renew = _get_renew_surcharge(surcharge_df, ym)
-
-        price_with = compute_model_price(rate, fuel_with, renew, usage_kwh)
-        price_without = compute_model_price(rate, fuel_without, renew, usage_kwh)
-
-        # 調整比でCPI指数を補正
-        ratio = price_without / price_with
-        adjusted[ym] = cpi_index[ym] * ratio
+        sub = subsidy_dict.get(ym, 0.0)
+        if sub > 0:
+            adjusted[ym] = cpi_index[ym] + sub * sensitivity
 
     return adjusted
