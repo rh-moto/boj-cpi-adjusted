@@ -139,15 +139,18 @@ def compute_adjusted_index(
     Returns:
         調整済CPI指数
     """
-    fuel_df = _load_fuel_adj()
-    subsidy_dict = dict(zip(fuel_df["year_month"], fuel_df["subsidy_per_kwh"]))
+    # 補助金はCPIラグ（使用月+1ヶ月）を反映した
+    # adjust_energy.get_monthly_subsidy_by_cpi_month()を使用。
+    # 燃調CSVのsubsidy列はTEPCO検針月ベースでラグ未反映のため不使用。
+    from src.adjust_energy import get_monthly_subsidy_by_cpi_month
+    subsidy_by_cpi = get_monthly_subsidy_by_cpi_month("electricity")
 
     p0 = compute_p0(usage_kwh)
     sensitivity = usage_kwh / p0 * 100  # pt per yen/kWh
 
     adjusted = cpi_index.copy()
     for ym in cpi_index.index:
-        sub = subsidy_dict.get(ym, 0.0)
+        sub = subsidy_by_cpi.get(ym, 0.0)
         if sub > 0:
             adjusted[ym] = cpi_index[ym] + sub * sensitivity
 
