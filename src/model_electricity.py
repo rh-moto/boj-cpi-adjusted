@@ -142,7 +142,7 @@ def compute_adjusted_index(
     # 補助金はCPIラグ（使用月+1ヶ月）を反映した
     # adjust_energy.get_monthly_subsidy_by_cpi_month()を使用。
     # 燃調CSVのsubsidy列はTEPCO検針月ベースでラグ未反映のため不使用。
-    from src.adjust_energy import get_monthly_subsidy_by_cpi_month
+    from src.energy_subsidy import get_monthly_subsidy_by_cpi_month
     subsidy_by_cpi = get_monthly_subsidy_by_cpi_month("electricity")
 
     p0 = compute_p0(usage_kwh)

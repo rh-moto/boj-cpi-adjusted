@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.adjust_energy import get_monthly_subsidy_by_cpi_month
+from src.energy_subsidy import get_monthly_subsidy_by_cpi_month
 
 
 class TestCPILag:

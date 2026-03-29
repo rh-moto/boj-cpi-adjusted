@@ -64,7 +64,7 @@ def compute_adjusted_index(
 
     補助金はCPIラグ（使用月+1ヶ月）を反映した値を使用。
     """
-    from src.adjust_energy import get_monthly_subsidy_by_cpi_month
+    from src.energy_subsidy import get_monthly_subsidy_by_cpi_month
     subsidy_by_cpi = get_monthly_subsidy_by_cpi_month("gas")
 
     p0 = compute_p0(usage_m3)
