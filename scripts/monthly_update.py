@@ -43,7 +43,7 @@ from src.validate import compare_series, print_validation_report
 from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
 from src.adjust_kerosene import compute_adjusted_index as adjust_kerosene
 from src.model_electricity import compute_adjusted_index as adjust_electricity
-from src.adjust_energy import compute_adjusted_index as adjust_energy
+from src.model_gas import compute_adjusted_index as adjust_gas
 from src.policy_engine import apply_all_events
 from src.config import OUTPUT_DIR
 
@@ -80,7 +80,7 @@ def build_adjusted_indices(indices):
     adj["7301"] = adjust_gasoline(indices["7301"])
     adj["3701"] = adjust_kerosene(indices["3701"])
     adj["3500"] = adjust_electricity(indices["3500"])
-    adj["3600"] = adjust_energy(indices["3600"], "gas")
+    adj["3600"] = adjust_gas(indices["3600"])
     # 教育・携帯・宿泊（政策イベントテーブル駆動）
     adj = apply_all_events(adj)
     return adj
