@@ -2,70 +2,85 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## プロジェクト概要
+## Project Overview
 
-日銀「消費者物価のコア指標」の一部として公表される「特殊要因を除いたCPI」を自前で再現する計算パイプライン。日銀公表値との突合・検証を行う。
+Pipeline to reproduce the Bank of Japan's "CPI excluding special factors" (特殊要因を除いたCPI). Supports both 2015-base and 2020-base CPI.
 
-対象3系列: コアCPI、コアコアCPI、日銀コア（除く食料・エネルギー）
+Target series: Core CPI, Core-core CPI, BOJ Core (excl. food & energy)
 
-5つの特殊要因: 消費税率変更、教育無償化、携帯電話通信料引下げ、旅行支援策、エネルギー負担緩和策（ガソリン・電気代・ガス代）
+Special factors: Energy subsidies, education policy, mobile fee reduction, travel support, consumption tax (2015-base)
 
-## 開発環境
+## Development
 
 ```bash
 source .venv/bin/activate
-python scripts/run_phase0.py    # Phase 0 全体テスト
-python scripts/build_item_master.py  # 品目マスタ再生成
-ruff check src/                 # lint
-pytest                          # テスト
+python scripts/monthly_update.py       # Monthly pipeline
+python scripts/monthly_update.py --refresh  # Re-download CPI data
+pytest                                  # Run tests (17 tests)
+ruff check src/                         # Lint
 ```
 
-## コードアーキテクチャ
+## Architecture
 
 ```
 src/
-  config.py          # パス・定数定義
-  item_master.py     # 品目マスタ管理（582品目、分類フラグ、3系列フィルタ）
-  fetch_cpi.py       # 総務省CPI月次指数パーサー（CSVベース）
-  fetch_weights.py   # ウエイトパーサー（固定/連鎖）
-  fetch_boj.py       # 日銀公表値パーサー
-  aggregate.py       # 上位指数集計（公式値取得 + 加重平均）
-  validate.py        # 検証レポート
-  adjust_gasoline.py # ガソリン調整（Phase 1）
+  config.py            # Paths, base_year, URLs
+  pipeline.py          # Shared: build_adjusted_indices()
+  fetch_cpi.py         # Statistics Bureau CPI CSV parser (2015/2020)
+  fetch_boj.py         # BOJ published values parser (2015/2020)
+  item_master.py       # Item master with classification flags (2015/2020)
+  aggregate.py         # Weighted average, official series lookup
+  policy_engine.py     # CSV-driven policy event engine
+  energy_subsidy.py    # CPI lag handling for electricity/gas
+  adjust_gasoline.py   # Gasoline: PDF subsidy + provisional tax
+  adjust_kerosene.py   # Kerosene: PDF subsidy
+  model_electricity.py # Electricity: TEPCO model + additive subsidy
+  model_gas.py         # City gas: Tokyo Gas model + additive subsidy
+  adjust_tax.py        # Consumption tax (2015-base only)
+  validate.py          # Validation helpers
 
 scripts/
-  build_item_master.py  # 品目分類Excel→品目マスタCSV
-  explore_estat.py      # e-Stat API探索
-  run_phase0.py         # Phase 0動作確認
+  monthly_update.py       # Monthly pipeline entry point
+  plot_results.py         # Generate comparison charts
+  build_item_master.py    # Generate 2020-base item master CSV
+  build_item_master_2015.py  # Generate 2015-base item master CSV
+  build_gasoline_subsidy.py  # Generate gasoline subsidy CSV
 
-data/
-  soumu/               # 総務省データ（.gitignore対象）
-  meti/                # 資源エネルギー庁データ
-  boj/                 # 日銀データ（.gitignore対象）
-  policy_params/       # 政策パラメータCSV（git管理）
-    item_master.csv    # 品目マスタ
-    gasoline_subsidy.csv  # ガソリン補助金単価テーブル
+data/policy_params/       # Policy parameter CSVs (git-tracked)
+  policy_events.csv       # Education, mobile, travel events
+  electricity_subsidy.csv # Electricity subsidy by usage month
+  gas_subsidy.csv         # Gas subsidy by usage month
+  gasoline_subsidy_monthly.csv  # Gasoline subsidy (PDF graph)
+  kerosene_subsidy_monthly.csv  # Kerosene subsidy (PDF graph)
+  tepco_fuel_adjustment.csv     # TEPCO monthly fuel adjustment
+  tokyo_gas_adjustment.csv      # Tokyo Gas monthly adjustment
+  tepco_rates.csv               # TEPCO tariff table
+  renew_energy_surcharge.csv    # Renewable energy surcharge
+  tax_category_2019.csv         # Consumption tax classification
+  item_master.csv               # 2020-base item master (582 items)
+  item_master_2015.csv          # 2015-base item master (585 items)
+  crosswalk_2015_2020.csv       # Item code crosswalk
 ```
 
-## 重要な設計判断
+## Key Design Decisions
 
-- **品目コードは計画書と異なる**: ガソリン=7301（計画書7311）、都市ガス代=3600（計画書3510）、携帯通信料=7430（計画書7340）、宿泊料=9300（計画書9341）等。正しいコードは`item_master.py`のSPECIAL_FACTOR_ITEMSを参照
-- **幼稚園保育料は2020年基準で品目消滅**: 幼保無償化が基準時に織込み済みのため調整不要
-- **未調整の上位指数はCSV公式集計値を使用**: 品目別加重平均は固定ウエイトの制約で公式値と最大0.3乖離するため、未調整値は公式値（code: 0161, 0178, 0168）をそのまま使う
-- **調整済の上位指数は固定ウエイト加重平均**: 特殊要因調整の精度が支配的なので固定ウエイトで十分
-- **日銀公表値はcalibrateに使わない**: 検証のみ。パラメータは外生的に固定
+- **Item codes differ from work plan**: Gasoline=7301, City gas=3600, Mobile=7430, Hotel=9300. See `item_master.py` SPECIAL_FACTOR_ITEMS.
+- **Kindergarten tuition gone in 2020-base**: ECE free already in base period. Exists in 2015-base (8080/8090).
+- **Official aggregate series for unadjusted**: Fixed-weight aggregation diverges ~0.3pp from official. Use CSV official values (0161, 0178, 0168).
+- **No calibration against BOJ**: BOJ values are for validation only. Parameters are set independently.
+- **Energy: additive method**: `adjusted = CPI + subsidy × usage / P₀ × 100`. Ratio method causes distortion at tariff transitions.
+- **Policy events are CSV-driven**: Add a row to `policy_events.csv` for new policies. No code changes needed.
 
-## 主要データソース
+## Monthly Update
 
-| データ | URL | ファイル |
-|---|---|---|
-| CPI品目別月次指数 | stat.go.jp/data/cpi/2020/csv/zmi2020aa.csv | data/soumu/cpi_monthly_all.csv |
-| 品目分類一覧 | stat.go.jp/.../zuhyou/4-1.xlsx | data/soumu/item_classification.xlsx |
-| 連鎖ウエイト | stat.go.jp/.../rensa-wt_2020.xlsx | data/soumu/weight_chain.xlsx |
-| 日銀コア指標 | boj.or.jp/.../cpirev.xlsx | data/boj/cpi_core_indicators.xlsx |
+See `docs/operations_guide.md` for detailed procedure. In brief:
+1. Update 4 CSVs (gasoline, kerosene, TEPCO fuel adj, Tokyo Gas adj)
+2. Check electricity/gas subsidy tables if subsidy is active
+3. Run `python scripts/monthly_update.py --refresh`
 
-## 注意事項
+## Docs
 
-- 日銀は特殊要因の定義を予告なく変更する可能性がある
-- 2025年基準改定（2026年8月予定）で品目・ウエイト・モデル式が変わる
-- 調整ロジックの詳細（数式、品目コード等）は `boj_cpi_workplan_v2.md` を参照
+- `docs/operations_guide.md` — Full operations guide
+- `docs/refactoring_plan.md` — Refactoring roadmap
+- `boj_cpi_workplan_v2.md` — Original work plan
+- `workplan_2015base.md` — 2015-base expansion plan
