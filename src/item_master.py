@@ -18,10 +18,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.config import POLICY_DIR
+from src.config import POLICY_DIR, BASE_YEAR
 
-# 品目マスタCSVのパス
-ITEM_MASTER_PATH = POLICY_DIR / "item_master.csv"
+# 品目マスタCSVのパス（基準年別）
+ITEM_MASTER_PATHS = {
+    2015: POLICY_DIR / "item_master_2015.csv",
+    2020: POLICY_DIR / "item_master.csv",
+}
 
 # エネルギー品目コード（2020年基準、品目情報一覧Excelから確認済み）
 ENERGY_ITEM_CODES = {
@@ -47,27 +50,20 @@ SPECIAL_FACTOR_ITEMS = {
 }
 
 
-def load_item_master() -> pd.DataFrame:
+def load_item_master(base_year: int | None = None) -> pd.DataFrame:
     """品目マスタCSVを読み込む
 
-    Returns:
-        DataFrame with columns:
-            item_code: 品目コード（文字列）
-            item_name: 品目名
-            category_10: 10大費目名
-            category_mid: 中分類名
-            category_small: 小分類名
-            is_fresh: 生鮮食品フラグ
-            is_energy: エネルギーフラグ
-            is_food: 食料フラグ（酒類含む）
-            is_alcohol: 酒類フラグ
+    Args:
+        base_year: 基準年（2015 or 2020）。Noneならconfig.BASE_YEARを使用。
     """
-    if not ITEM_MASTER_PATH.exists():
+    by = base_year or BASE_YEAR
+    path = ITEM_MASTER_PATHS[by]
+    if not path.exists():
         raise FileNotFoundError(
-            f"品目マスタが見つかりません: {ITEM_MASTER_PATH}\n"
-            "scripts/build_item_master.py を実行してください"
+            f"品目マスタが見つかりません: {path}\n"
+            f"scripts/build_item_master{'_2015' if by == 2015 else ''}.py を実行してください"
         )
-    df = pd.read_csv(ITEM_MASTER_PATH, dtype={"item_code": str})
+    df = pd.read_csv(path, dtype={"item_code": str})
     return df
 
 
