@@ -25,7 +25,7 @@
   □ data/policy_params/gas_subsidy.csv（ガス代補助の開始/終了/単価変更）
   □ data/policy_params/tepco_rates.csv（TEPCO料金改定時）
   □ data/policy_params/renew_energy_surcharge.csv（毎年5月、再エネ賦課金改定）
-  □ src/adjust_education.py のEDUCATION_STEPS（新たな無償化政策時）
+  □ data/policy_params/policy_events.csv（新たな無償化政策時、1行追加）
 """
 
 import sys

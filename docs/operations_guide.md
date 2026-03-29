@@ -249,7 +249,7 @@ effective_from,effective_to,surcharge_per_kwh
 | `model_gas.py` | City gas: Tokyo Gas model P₀ + additive subsidy |
 | `adjust_tax.py` | Consumption tax (2015-base backtest only, not in monthly pipeline) |
 | `adjust_energy.py` | CPI lag handling for electricity/gas subsidy tables |
-| `adjust_education.py` | Legacy; superseded by `policy_engine.py` + `policy_events.csv` |
+| ~~`adjust_education.py`~~ | Deleted; superseded by `policy_engine.py` + `policy_events.csv` |
 
 ---
 
