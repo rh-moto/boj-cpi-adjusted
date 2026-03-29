@@ -20,8 +20,7 @@ from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
 from src.adjust_kerosene import compute_adjusted_index as adjust_kerosene
 from src.model_electricity import compute_adjusted_index as adjust_electricity
 from src.adjust_energy import compute_adjusted_index as adjust_energy
-from src.adjust_education import get_all_education_adjusted
-from src.adjust_interpolation import adjust_mobile, adjust_hotel
+from src.policy_engine import apply_all_events
 from src.config import OUTPUT_DIR
 
 plt.rcParams["font.family"] = ["Hiragino Sans", "Hiragino Kaku Gothic Pro", "Arial Unicode MS", "sans-serif"]
@@ -35,15 +34,15 @@ def build_adjusted_indices():
     master = load_item_master()
     boj = parse_boj()
 
+    # エネルギー系（CSVデータ駆動、個別モジュール）
     indices_adj = indices.copy()
     indices_adj["7301"] = adjust_gasoline(indices["7301"])
     indices_adj["3701"] = adjust_kerosene(indices["3701"])
     indices_adj["3500"] = adjust_electricity(indices["3500"])
     indices_adj["3600"] = adjust_energy(indices["3600"], "gas")
-    for code, adj in get_all_education_adjusted(indices).items():
-        indices_adj[code] = adj
-    indices_adj["7430"] = adjust_mobile(indices["7430"])
-    indices_adj["9300"] = adjust_hotel(indices["9300"])
+
+    # 教育・携帯・宿泊（政策イベントテーブル駆動）
+    indices_adj = apply_all_events(indices_adj)
 
     return indices, indices_adj, weights, master, boj
 

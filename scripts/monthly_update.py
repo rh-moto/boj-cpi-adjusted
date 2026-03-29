@@ -44,8 +44,7 @@ from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
 from src.adjust_kerosene import compute_adjusted_index as adjust_kerosene
 from src.model_electricity import compute_adjusted_index as adjust_electricity
 from src.adjust_energy import compute_adjusted_index as adjust_energy
-from src.adjust_education import get_all_education_adjusted
-from src.adjust_interpolation import adjust_mobile, adjust_hotel
+from src.policy_engine import apply_all_events
 from src.config import OUTPUT_DIR
 
 
@@ -77,14 +76,13 @@ def check_data_freshness(indices, boj):
 def build_adjusted_indices(indices):
     """全調整を適用"""
     adj = indices.copy()
+    # エネルギー系（CSVデータ駆動、個別モジュール）
     adj["7301"] = adjust_gasoline(indices["7301"])
     adj["3701"] = adjust_kerosene(indices["3701"])
     adj["3500"] = adjust_electricity(indices["3500"])
     adj["3600"] = adjust_energy(indices["3600"], "gas")
-    for code, series in get_all_education_adjusted(indices).items():
-        adj[code] = series
-    adj["7430"] = adjust_mobile(indices["7430"])
-    adj["9300"] = adjust_hotel(indices["9300"])
+    # 教育・携帯・宿泊（政策イベントテーブル駆動）
+    adj = apply_all_events(adj)
     return adj
 
 
