@@ -45,8 +45,8 @@ def main():
 
     boj_map = {
         "core": ("core_ex_special", "コアCPI（除く生鮮食品）"),
-        "core_core": ("core_core_ex_special", "日銀コアCPI（除く生鮮食品・エネルギー）"),
-        "boj_core": ("boj_core_ex_special", "コアコアCPI（除く食料・エネルギー）"),
+        "boj_core": ("boj_core_ex_special", "日銀コアCPI（除く生鮮食品・エネルギー）"),
+        "core_core": ("core_core_ex_special", "コアコアCPI（除く食料・エネルギー）"),
     }
 
     # --- 図1: 3系列の前年比比較 ---
