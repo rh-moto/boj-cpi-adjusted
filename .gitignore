@@ -7,12 +7,10 @@ build/
 .ruff_cache/
 .pytest_cache/
 
-# 大容量データファイル（生データはgit管理しない）
-data/soumu/*.xlsx
-data/soumu/*.xls
-data/soumu/*.csv
-data/meti/*.xlsx
-data/boj/*.xlsx
+# CPI monthly CSVs (auto-downloaded, large)
+data/soumu/cpi_monthly_all.csv
+data/soumu/cpi_monthly_2015.csv
+data/soumu/cpi_longterm_2020base.csv
 
 # 出力（PNGは追跡する）
 output/*.csv
