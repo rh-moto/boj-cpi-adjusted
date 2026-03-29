@@ -93,6 +93,17 @@ def apply_trend_extend(cpi_index: pd.Series, events: pd.DataFrame) -> pd.Series:
                 pre_yoy_list.append(cpi_index[ym_curr] / cpi_index[ym_prev] - 1)
         pre_yoy = sum(pre_yoy_list) / len(pre_yoy_list) if pre_yoy_list else 0
 
+        # 前年データがない場合: 支援開始直前月の値で保合
+        if not pre_yoy_list:
+            pre_month = f"{y_from}-{m_from - 1:02d}" if m_from > 1 else f"{y_from - 1}-12"
+            if pre_month in cpi_index.index:
+                pre_val = cpi_index[pre_month]
+                for m in range(m_from, 13):
+                    ym = f"{y_from}-{m:02d}"
+                    if ym in adjusted.index and ym <= ym_to:
+                        adjusted[ym] = pre_val
+                continue
+
         # 2年間の年率成長（支援なし月から推定）
         growth_list = []
         for m in range(1, 10):
