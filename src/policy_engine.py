@@ -12,7 +12,21 @@ adjustment_type:
 
 import pandas as pd
 
-from src.config import POLICY_DIR, BASE_YEAR
+from src.config import POLICY_DIR, SOUMU_DIR, BASE_YEAR
+
+_longterm_cache = None
+
+
+def _load_longterm() -> pd.DataFrame | None:
+    """2020年基準の長期時系列（e-Stat表4-1、1970年〜）を読み込み"""
+    global _longterm_cache
+    if _longterm_cache is not None:
+        return _longterm_cache
+    path = SOUMU_DIR / "cpi_longterm_2020base.csv"
+    if not path.exists():
+        return None
+    _longterm_cache = pd.read_csv(path, index_col=0)
+    return _longterm_cache
 
 
 def load_policy_events(base_year: int | None = None) -> pd.DataFrame:
@@ -84,25 +98,56 @@ def apply_trend_extend(cpi_index: pd.Series, events: pd.DataFrame) -> pd.Series:
         y_to = int(ym_to[:4])
         m_to = int(ym_to[5:7])
 
-        # 支援前のトレンド（前年Q1-Q3の平均前年比）
+        # 支援前のトレンド（支援開始前月までの前年比平均）
         pre_yoy_list = []
-        for m in range(1, 10):
+        trend_end_m = min(m_from - 1, 9)  # 支援開始前月まで（最大Q3）
+        for m in range(1, trend_end_m + 1):
             ym_curr = f"{y_from}-{m:02d}"
             ym_prev = f"{y_from - 1}-{m:02d}"
             if ym_curr in cpi_index.index and ym_prev in cpi_index.index:
                 pre_yoy_list.append(cpi_index[ym_curr] / cpi_index[ym_prev] - 1)
         pre_yoy = sum(pre_yoy_list) / len(pre_yoy_list) if pre_yoy_list else 0
 
-        # 前年データがない場合: 支援開始直前月の値で保合
+        # 前年データがない場合: 長期時系列から前年データを取得して計算
         if not pre_yoy_list:
-            pre_month = f"{y_from}-{m_from - 1:02d}" if m_from > 1 else f"{y_from - 1}-12"
-            if pre_month in cpi_index.index:
-                pre_val = cpi_index[pre_month]
-                for m in range(m_from, 13):
-                    ym = f"{y_from}-{m:02d}"
-                    if ym in adjusted.index and ym <= ym_to:
-                        adjusted[ym] = pre_val
-                continue
+            longterm = _load_longterm()
+            if longterm is not None:
+                item_col = None
+                # 品目コードに対応する列を探す（含類総連番→品目コードの変換済み）
+                for col in longterm.columns:
+                    if col == cpi_index.name:
+                        item_col = col
+                        break
+                # 品目名がSeriesのnameに設定されていない場合もある
+                # events DataFrameからitem_codeを取得
+                if item_col is None:
+                    # nameが整数の場合、文字列に変換して照合
+                    name_str = str(cpi_index.name)
+                    if name_str in longterm.columns:
+                        item_col = name_str
+
+                if item_col is not None:
+                    # 長期時系列から前年トレンドを計算（支援開始前月まで）
+                    for m in range(1, trend_end_m + 1):
+                        ym_curr = f"{y_from}-{m:02d}"
+                        ym_prev = f"{y_from - 1}-{m:02d}"
+                        if ym_curr in longterm.index and ym_prev in longterm.index:
+                            pre_yoy_list.append(
+                                longterm.loc[ym_curr, item_col] / longterm.loc[ym_prev, item_col] - 1
+                            )
+                    if pre_yoy_list:
+                        pre_yoy = sum(pre_yoy_list) / len(pre_yoy_list)
+
+            # それでもダメなら保合フォールバック
+            if not pre_yoy_list:
+                pre_month = f"{y_from}-{m_from - 1:02d}" if m_from > 1 else f"{y_from - 1}-12"
+                if pre_month in cpi_index.index:
+                    pre_val = cpi_index[pre_month]
+                    for m in range(m_from, 13):
+                        ym = f"{y_from}-{m:02d}"
+                        if ym in adjusted.index and ym <= ym_to:
+                            adjusted[ym] = pre_val
+                    continue
 
         # 2年間の年率成長（支援なし月から推定）
         growth_list = []
@@ -113,20 +158,33 @@ def apply_trend_extend(cpi_index: pd.Series, events: pd.DataFrame) -> pd.Series:
                 growth_list.append((cpi_index[ym_post] / cpi_index[ym_base]) ** 0.5 - 1)
         annual_growth = sum(growth_list) / len(growth_list) if growth_list else 0
 
+        # 前年同月の値を取得する関数（cpi_indexになければ長期時系列から）
+        def _get_prev_value(prev_ym_key):
+            if prev_ym_key in cpi_index.index:
+                return cpi_index[prev_ym_key]
+            longterm = _load_longterm()
+            if longterm is not None:
+                item_col = str(cpi_index.name)
+                if item_col in longterm.columns and prev_ym_key in longterm.index:
+                    return longterm.loc[prev_ym_key, item_col]
+            return None
+
         # 支援期間中を推定値で置換
         for m in range(m_from, 13):
             ym = f"{y_from}-{m:02d}"
             prev_ym = f"{y_from - 1}-{m:02d}"
-            if ym in adjusted.index and prev_ym in cpi_index.index:
-                adjusted[ym] = cpi_index[prev_ym] * (1 + pre_yoy)
+            prev_val = _get_prev_value(prev_ym)
+            if ym in adjusted.index and prev_val is not None:
+                adjusted[ym] = prev_val * (1 + pre_yoy)
 
         for y in range(y_from + 1, y_to + 1):
             end_m = m_to if y == y_to else 12
             for m in range(1, end_m + 1):
                 ym = f"{y}-{m:02d}"
                 base_ym = f"{y - 1}-{m:02d}"
-                if ym in adjusted.index and base_ym in cpi_index.index:
-                    adjusted[ym] = cpi_index[base_ym] * (1 + annual_growth)
+                base_val = _get_prev_value(base_ym)
+                if ym in adjusted.index and base_val is not None:
+                    adjusted[ym] = base_val * (1 + annual_growth)
 
     return adjusted
 
