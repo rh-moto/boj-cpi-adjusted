@@ -7,17 +7,10 @@
 Excel構造 (chartシート):
   行0: 空
   行1: 系列名（日本語）
-  行2: 基準年
+  行2: 基準年（20年基準 / 15年基準）
   行3: 系列名（英語）
   行4: 基準年（英語）
   行5〜: データ（col 0=日付, col 1〜=前年比%）
-
-  2020年基準の列:
-    col 1: 除く生鮮食品、特殊要因（前年比%）= コアCPI
-    col 4: 除く生鮮食品・エネルギー、特殊要因（前年比%）= コアコアCPI
-    col 7: 除く食料・エネルギー、特殊要因（前年比%）= 日銀コア
-    col 10: 刈込平均値（前年比%）
-    col 16: 加重中央値（前年比%）
 """
 
 from pathlib import Path
@@ -25,17 +18,10 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from src.config import BOJ_DIR
+from src.config import BOJ_DIR, BOJ_SERIES_COLS, BASE_YEAR
 
 BOJ_URL = "https://www.boj.or.jp/research/research_data/cpi/cpirev.xlsx"
 BOJ_PATH = BOJ_DIR / "cpi_core_indicators.xlsx"
-
-# 2020年基準の特殊要因除外系列の列インデックス
-BOJ_SERIES_COLS = {
-    "core_ex_special": 1,       # 除く生鮮食品、特殊要因
-    "core_core_ex_special": 4,  # 除く生鮮食品・エネルギー、特殊要因
-    "boj_core_ex_special": 7,   # 除く食料・エネルギー、特殊要因
-}
 
 
 def download_boj(force: bool = False) -> Path:
@@ -53,15 +39,23 @@ def download_boj(force: bool = False) -> Path:
     return BOJ_PATH
 
 
-def parse_boj(filepath: Path | None = None) -> dict[str, pd.Series]:
+def parse_boj(
+    filepath: Path | None = None,
+    base_year: int | None = None,
+) -> dict[str, pd.Series]:
     """日銀コア指標Excelをパース
+
+    Args:
+        filepath: Excelファイルパス
+        base_year: 基準年（2015 or 2020）
 
     Returns:
         {系列名: 前年比%のSeries(index=YYYY-MM)}
-        系列名: "core_ex_special", "core_core_ex_special", "boj_core_ex_special"
     """
     if filepath is None:
         filepath = BOJ_PATH
+    by = base_year or BASE_YEAR
+    cols = BOJ_SERIES_COLS[by]
 
     df = pd.read_excel(filepath, sheet_name="chart", header=None, skiprows=5)
 
@@ -70,11 +64,10 @@ def parse_boj(filepath: Path | None = None) -> dict[str, pd.Series]:
     ym_index = dates.dt.strftime("%Y-%m")
 
     result = {}
-    for name, col in BOJ_SERIES_COLS.items():
+    for name, col in cols.items():
         if col < df.shape[1]:
             values = pd.to_numeric(df.iloc[:, col], errors="coerce")
             s = pd.Series(values.values, index=ym_index, name=name)
-            # NaN行を除去
             s = s.dropna()
             result[name] = s
 
