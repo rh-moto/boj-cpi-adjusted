@@ -69,8 +69,6 @@ def check_data_freshness(indices, boj):
                 print(f"✓ {label}: {latest}")
 
 
-    # build_adjusted_indices is now imported from src.pipeline
-
 
 def main():
     refresh = "--refresh" in sys.argv
