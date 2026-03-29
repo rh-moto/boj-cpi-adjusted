@@ -23,15 +23,13 @@ plt.rcParams["font.family"] = ["Hiragino Sans", "Hiragino Kaku Gothic Pro", "Ari
 plt.rcParams["axes.unicode_minus"] = False
 
 
-def build_adjusted_indices():
-    """全調整を適用した指数を構築"""
+def load_and_adjust():
+    """Load CPI data and apply all adjustments."""
     indices, meta = parse_cpi_csv()
     weights = get_fixed_weights(meta)
     master = load_item_master()
     boj = parse_boj()
-
     indices_adj = build_adjusted_indices(indices)
-
     return indices, indices_adj, weights, master, boj
 
 
@@ -43,7 +41,7 @@ def ym_to_date(ym_index):
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    indices, indices_adj, weights, master, boj = build_adjusted_indices()
+    indices, indices_adj, weights, master, boj = load_and_adjust()
 
     boj_map = {
         "core": ("core_ex_special", "コアCPI（除く生鮮食品）"),
