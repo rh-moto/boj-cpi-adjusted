@@ -1,5 +1,4 @@
 ﻿item_code,item_name,category_10,category_mid,category_small,weight_per_10000,is_fresh,is_energy,is_food,is_alcohol,is_education,is_info_comm
-1000,うるち米,食料,穀類,米類,59,False,False,True,False,False,False
 1001,うるち米Ａ,食料,穀類,米類,25,False,False,True,False,False,False
 1002,うるち米Ｂ,食料,穀類,米類,34,False,False,True,False,False,False
 1011,もち米,食料,穀類,米類,3,False,False,True,False,False,False
@@ -403,13 +402,11 @@
 6221,マッサージ料金,保健医療,保健医療サービス,,10,False,False,False,False,False,False
 6222,人間ドック受診料,保健医療,保健医療サービス,,10,False,False,False,False,False,False
 6223,予防接種料,保健医療,保健医療サービス,,8,False,False,False,False,False,False
-7026,鉄道運賃（ＪＲ）,交通・通信,交通,,86,False,False,False,False,False,False
 7527,普通運賃（ＪＲ）,交通・通信,交通,,35,False,False,False,False,False,False
 7528,料金（ＪＲ，在来線）,交通・通信,交通,,8,False,False,False,False,False,False
 7530,料金（ＪＲ，新幹線）,交通・通信,交通,,19,False,False,False,False,False,False
 7029,通学定期（ＪＲ）,交通・通信,交通,,7,False,False,False,False,True,False
 7030,通勤定期（ＪＲ）,交通・通信,交通,,17,False,False,False,False,False,False
-7007,鉄道運賃（ＪＲ以外）,交通・通信,交通,,42,False,False,False,False,False,False
 7008,普通運賃（ＪＲ以外）,交通・通信,交通,,21,False,False,False,False,False,False
 7009,通学定期（ＪＲ以外）,交通・通信,交通,,5,False,False,False,False,True,False
 7010,通勤定期（ＪＲ以外）,交通・通信,交通,,16,False,False,False,False,False,False
@@ -417,7 +414,6 @@
 7057,高速バス代,交通・通信,交通,,4,False,False,False,False,False,False
 7060,タクシー代,交通・通信,交通,,18,False,False,False,False,False,False
 7070,航空運賃,交通・通信,交通,,22,False,False,False,False,False,False
-7360,有料道路料,交通・通信,交通,,35,False,False,False,False,False,False
 7363,高速自動車国道料金,交通・通信,交通,,26,False,False,False,False,False,False
 7364,都市高速道路料金,交通・通信,交通,,9,False,False,False,False,False,False
 7105,軽乗用車,交通・通信,自動車等関係費,自動車,40,False,False,False,False,False,False
@@ -507,7 +503,6 @@
 9189,園芸用肥料,教養娯楽,教養娯楽用品,他の教養娯楽用品,8,False,False,False,False,False,False
 9195,電池,教養娯楽,教養娯楽用品,他の教養娯楽用品,5,False,False,False,False,False,False
 9128,プリンタ用インク,教養娯楽,教養娯楽用品,他の教養娯楽用品,7,False,False,False,False,False,False
-9200,新聞代,教養娯楽,書籍・他の印刷物,新聞代,88,False,False,False,False,False,False
 9204,新聞代（地方・ブロック紙）,教養娯楽,書籍・他の印刷物,新聞代,35,False,False,False,False,False,False
 9205,新聞代（全国紙）,教養娯楽,書籍・他の印刷物,新聞代,54,False,False,False,False,False,False
 9226,月刊誌,教養娯楽,書籍・他の印刷物,雑誌,9,False,False,False,False,False,False

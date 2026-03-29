@@ -23,6 +23,15 @@ def build_item_master_2015():
 
     df = pd.read_excel(filepath, sheet_name="品目情報一覧", header=None, skiprows=5)
 
+    # 親品目を検出して除外（子品目と二重計上になるため）
+    # 親品目: col 5(品目1)に値があり、直後の行のcol 6(品目2)に子品目がある
+    parent_indices = set()
+    for idx in df.index:
+        if pd.notna(df.loc[idx, 9]) and pd.notna(df.loc[idx, 5]):
+            next_idx = idx + 1
+            if next_idx in df.index and pd.notna(df.loc[next_idx, 6]) and pd.notna(df.loc[next_idx, 9]):
+                parent_indices.add(idx)
+
     records = []
     current_categories = {0: "", 1: "", 2: "", 3: "", 4: ""}
 
@@ -34,8 +43,8 @@ def build_item_master_2015():
                 for lower in range(level + 1, 5):
                     current_categories[lower] = ""
 
-        # 品目行（品目符号col[9]が存在する行）
-        if pd.notna(row[9]):
+        # 品目行（品目符号col[9]が存在し、親品目でない行）
+        if pd.notna(row[9]) and i not in parent_indices:
             item_code = str(int(row[9]))
             # 品目名はcol 5またはcol 6
             item_name = ""
