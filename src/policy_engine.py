@@ -59,7 +59,8 @@ def apply_hold_and_step(cpi_index: pd.Series, events: pd.DataFrame) -> pd.Series
         val_pre = cpi_index[pre_ym]
 
         if ym_to not in all_months:
-            continue
+            # effective_toがデータ範囲外の場合、データの最終月を使う
+            ym_to = all_months[-1]
         val_end = cpi_index[ym_to]
         step = val_pre - val_end
 
