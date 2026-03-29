@@ -16,11 +16,7 @@ from src.fetch_cpi import parse_cpi_csv, get_fixed_weights
 from src.fetch_boj import parse_boj
 from src.item_master import load_item_master
 from src.aggregate import compute_weighted_index, compute_yoy, get_official_series
-from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
-from src.adjust_kerosene import compute_adjusted_index as adjust_kerosene
-from src.model_electricity import compute_adjusted_index as adjust_electricity
-from src.model_gas import compute_adjusted_index as adjust_gas
-from src.policy_engine import apply_all_events
+from src.pipeline import build_adjusted_indices
 from src.config import OUTPUT_DIR
 
 plt.rcParams["font.family"] = ["Hiragino Sans", "Hiragino Kaku Gothic Pro", "Arial Unicode MS", "sans-serif"]
@@ -34,15 +30,7 @@ def build_adjusted_indices():
     master = load_item_master()
     boj = parse_boj()
 
-    # エネルギー系（CSVデータ駆動、個別モジュール）
-    indices_adj = indices.copy()
-    indices_adj["7301"] = adjust_gasoline(indices["7301"])
-    indices_adj["3701"] = adjust_kerosene(indices["3701"])
-    indices_adj["3500"] = adjust_electricity(indices["3500"])
-    indices_adj["3600"] = adjust_gas(indices["3600"])
-
-    # 教育・携帯・宿泊（政策イベントテーブル駆動）
-    indices_adj = apply_all_events(indices_adj)
+    indices_adj = build_adjusted_indices(indices)
 
     return indices, indices_adj, weights, master, boj
 

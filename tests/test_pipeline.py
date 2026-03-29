@@ -78,7 +78,7 @@ def test_parse_boj_2015():
 def test_build_adjusted_indices():
     """Smoke test: build_adjusted_indices runs without error."""
     from src.fetch_cpi import parse_cpi_csv
-    from scripts.monthly_update import build_adjusted_indices
+    from src.pipeline import build_adjusted_indices
 
     indices, _ = parse_cpi_csv(base_year=2020)
     adj = build_adjusted_indices(indices)
@@ -96,7 +96,7 @@ def test_pipeline_output_precision():
     from src.fetch_boj import parse_boj
     from src.item_master import load_item_master
     from src.aggregate import compute_weighted_index, compute_yoy
-    from scripts.monthly_update import build_adjusted_indices
+    from src.pipeline import build_adjusted_indices
 
     indices, meta = parse_cpi_csv(base_year=2020)
     weights = get_fixed_weights(meta)

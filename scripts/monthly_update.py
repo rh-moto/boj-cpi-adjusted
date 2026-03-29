@@ -40,11 +40,7 @@ from src.fetch_boj import parse_boj
 from src.item_master import load_item_master
 from src.aggregate import compute_weighted_index, compute_yoy, get_official_series
 from src.validate import compare_series, print_validation_report
-from src.adjust_gasoline import compute_adjusted_index as adjust_gasoline
-from src.adjust_kerosene import compute_adjusted_index as adjust_kerosene
-from src.model_electricity import compute_adjusted_index as adjust_electricity
-from src.model_gas import compute_adjusted_index as adjust_gas
-from src.policy_engine import apply_all_events
+from src.pipeline import build_adjusted_indices
 from src.config import OUTPUT_DIR
 
 
@@ -73,17 +69,7 @@ def check_data_freshness(indices, boj):
                 print(f"✓ {label}: {latest}")
 
 
-def build_adjusted_indices(indices):
-    """全調整を適用"""
-    adj = indices.copy()
-    # エネルギー系（CSVデータ駆動、個別モジュール）
-    adj["7301"] = adjust_gasoline(indices["7301"])
-    adj["3701"] = adjust_kerosene(indices["3701"])
-    adj["3500"] = adjust_electricity(indices["3500"])
-    adj["3600"] = adjust_gas(indices["3600"])
-    # 教育・携帯・宿泊（政策イベントテーブル駆動）
-    adj = apply_all_events(adj)
-    return adj
+    # build_adjusted_indices is now imported from src.pipeline
 
 
 def main():
