@@ -1,4 +1,4 @@
-﻿item_code,item_name,category_10,category_mid,category_small,weight_per_10000,is_fresh,is_energy,is_food,is_alcohol,is_education,is_info_comm
+item_code,item_name,category_10,category_mid,category_small,weight_per_10000,is_fresh,is_energy,is_food,is_alcohol,is_education,is_info_comm
 1001,うるち米Ａ,食料,穀類,米類,25,False,False,True,False,False,False
 1002,うるち米Ｂ,食料,穀類,米類,34,False,False,True,False,False,False
 1011,もち米,食料,穀類,米類,3,False,False,True,False,False,False

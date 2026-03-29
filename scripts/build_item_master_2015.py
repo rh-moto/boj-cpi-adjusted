@@ -103,7 +103,7 @@ def build_item_master_2015():
         print(f"  {r['item_code']}: {r['item_name']} (w={r['weight_per_10000']})")
 
     outpath = POLICY_DIR / "item_master_2015.csv"
-    master.to_csv(outpath, index=False, encoding="utf-8-sig")
+    master.to_csv(outpath, index=False, encoding="utf-8")
     print(f"\n保存: {outpath}")
     return master
 

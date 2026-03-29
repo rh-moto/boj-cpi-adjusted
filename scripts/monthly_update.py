@@ -158,7 +158,7 @@ def main():
 
     result_df = pd.DataFrame(records)
     result_path = OUTPUT_DIR / "adjusted_cpi_yoy.csv"
-    result_df.to_csv(result_path, index=False, encoding="utf-8-sig")
+    result_df.to_csv(result_path, index=False, encoding="utf-8")
     print(f"保存: {result_path}")
 
     # 6. グラフ生成

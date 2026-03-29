@@ -112,7 +112,7 @@ def build_item_master():
     # 保存
     outpath = POLICY_DIR / "item_master.csv"
     outpath.parent.mkdir(parents=True, exist_ok=True)
-    master.to_csv(outpath, index=False, encoding="utf-8-sig")
+    master.to_csv(outpath, index=False, encoding="utf-8")
     print(f"\n保存: {outpath}")
 
     return master

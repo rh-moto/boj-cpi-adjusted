@@ -85,5 +85,5 @@ def save_validation_csv(comparisons: dict[str, pd.DataFrame], output_dir) -> Non
         if df.empty:
             continue
         path = output_dir / f"validation_{name}.csv"
-        df.to_csv(path, index=False, encoding="utf-8-sig")
+        df.to_csv(path, index=False, encoding="utf-8")
         print(f"保存: {path}")
