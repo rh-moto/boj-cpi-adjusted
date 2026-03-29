@@ -44,14 +44,14 @@ def main():
     indices, indices_adj, weights, master, boj = load_and_adjust()
 
     boj_map = {
-        "core": ("core_ex_special", "コアCPI（除く生鮮食品）"),
-        "boj_core": ("boj_core_ex_special", "日銀コアCPI（除く生鮮食品・エネルギー）"),
-        "core_core": ("core_core_ex_special", "コアコアCPI（除く食料・エネルギー）"),
+        "core": ("core_ex_special", "Core CPI (excl. fresh food)"),
+        "boj_core": ("boj_core_ex_special", "BOJ Core CPI (excl. fresh food & energy)"),
+        "core_core": ("core_core_ex_special", "Core-core CPI (excl. food & energy)"),
     }
 
     # --- 図1: 3系列の前年比比較 ---
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
-    fig.suptitle("特殊要因を除いたCPI前年比: 自前計算 vs 日銀公表値", fontsize=14, fontweight="bold")
+    fig.suptitle("CPI YoY excl. Special Factors: Computed vs BOJ Published", fontsize=14, fontweight="bold")
 
     for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
         # 未調整
@@ -70,11 +70,11 @@ def main():
         adj_vals = [yoy_adj[ym] for ym in common]
         boj_vals = [boj_s[ym] for ym in common]
 
-        ax.plot(dates, orig_vals, color="#BBBBBB", linewidth=1, label="未調整", linestyle="--")
-        ax.plot(dates, adj_vals, color="#2196F3", linewidth=1.8, label="自前計算（調整済）")
-        ax.plot(dates, boj_vals, color="#F44336", linewidth=1.8, label="日銀公表値", linestyle=":")
+        ax.plot(dates, orig_vals, color="#BBBBBB", linewidth=1, label="Unadjusted", linestyle="--")
+        ax.plot(dates, adj_vals, color="#2196F3", linewidth=1.8, label="Computed (adjusted)")
+        ax.plot(dates, boj_vals, color="#F44336", linewidth=1.8, label="BOJ Published", linestyle=":")
         ax.set_title(title, fontsize=11)
-        ax.set_ylabel("前年比（%）")
+        ax.set_ylabel("YoY (%)")
         ax.legend(loc="upper left", fontsize=9)
         ax.grid(True, alpha=0.3)
         ax.axhline(y=0, color="black", linewidth=0.5)
@@ -90,7 +90,7 @@ def main():
 
     # --- 図2: 残差（自前計算 - 日銀公表値） ---
     fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
-    fig.suptitle("残差（自前計算 − 日銀公表値、%pt）", fontsize=14, fontweight="bold")
+    fig.suptitle("Residuals (Computed - BOJ Published, %pt)", fontsize=14, fontweight="bold")
 
     for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
         adj = compute_weighted_index(indices_adj, weights, series_name, master)
@@ -103,8 +103,8 @@ def main():
 
         ax.bar(dates, residuals, width=25, color=["#F44336" if r < 0 else "#2196F3" for r in residuals], alpha=0.7)
         ax.axhline(y=0, color="black", linewidth=0.8)
-        ax.set_title(f"{title}  (直近12ヶ月MAE={mae:.2f}pp)", fontsize=11)
-        ax.set_ylabel("残差（%pt）")
+        ax.set_title(f"{title}  (Last 12m MAE={mae:.2f}pp)", fontsize=11)
+        ax.set_ylabel("Residual (%pt)")
         ax.set_ylim(-1.0, 1.0)
         ax.grid(True, alpha=0.3)
 
@@ -119,23 +119,23 @@ def main():
 
     # --- 図3: 品目別調整の効果（指数水準） ---
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle("品目別調整の効果（指数水準）", fontsize=14, fontweight="bold")
+    fig.suptitle("Item-level Adjustment Effects (Index Level)", fontsize=14, fontweight="bold")
 
     items = [
-        ("7301", "ガソリン", axes[0, 0]),
-        ("3500", "電気代", axes[0, 1]),
-        ("8020", "高校授業料（公立）", axes[1, 0]),
-        ("7430", "通信料（携帯電話）", axes[1, 1]),
+        ("7301", "Gasoline", axes[0, 0]),
+        ("3500", "Electricity", axes[0, 1]),
+        ("8020", "HS Tuition (Public)", axes[1, 0]),
+        ("7430", "Mobile Phone Fees", axes[1, 1]),
     ]
 
     for code, name, ax in items:
         dates_all = ym_to_date(indices.index)
-        ax.plot(dates_all, indices[code].values, color="#BBBBBB", linewidth=1.5, label="公表値")
-        ax.plot(dates_all, indices_adj[code].values, color="#2196F3", linewidth=1.5, label="調整済")
+        ax.plot(dates_all, indices[code].values, color="#BBBBBB", linewidth=1.5, label="Published")
+        ax.plot(dates_all, indices_adj[code].values, color="#2196F3", linewidth=1.5, label="Adjusted")
         ax.fill_between(dates_all, indices[code].values, indices_adj[code].values,
                         alpha=0.2, color="#2196F3")
         ax.set_title(f"{name}（{code}）", fontsize=11)
-        ax.set_ylabel("指数（2020年=100）")
+        ax.set_ylabel("Index (2020=100)")
         ax.legend(fontsize=9)
         ax.grid(True, alpha=0.3)
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
