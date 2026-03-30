@@ -17,6 +17,7 @@ from src.fetch_boj import parse_boj
 from src.item_master import load_item_master
 from src.aggregate import compute_weighted_index, compute_yoy, get_official_series
 from src.pipeline import build_adjusted_indices
+from src.policy_engine import apply_all_events
 from src.config import OUTPUT_DIR
 
 plt.rcParams["font.family"] = ["Hiragino Sans", "Hiragino Kaku Gothic Pro", "Arial Unicode MS", "sans-serif"]
@@ -51,7 +52,7 @@ def main():
 
     # --- 図1: 3系列の前年比比較 ---
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
-    fig.suptitle("CPI YoY excl. Special Factors: Computed vs BOJ estimates", fontsize=14, fontweight="bold")
+    fig.suptitle("CPI YoY excl. Special Factors: Our estimates vs BOJ estimates", fontsize=14, fontweight="bold")
 
     for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
         # 未調整
@@ -90,7 +91,7 @@ def main():
 
     # --- 図2: 残差（自前計算 - 日銀公表値） ---
     fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
-    fig.suptitle("Residuals (Computed - BOJ estimates, %pt)", fontsize=14, fontweight="bold")
+    fig.suptitle("Residuals (Our estimates - BOJ estimates, %pt)", fontsize=14, fontweight="bold")
 
     for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
         adj = compute_weighted_index(indices_adj, weights, series_name, master)
@@ -145,6 +146,63 @@ def main():
     path3 = OUTPUT_DIR / "fig3_item_adjustments.png"
     fig.savefig(path3, dpi=150, bbox_inches="tight")
     print(f"保存: {path3}")
+    plt.close()
+
+    # --- Fig 4: Full period (2015-base + 2020-base) ---
+    from src.adjust_tax import apply_tax_adjustment
+
+    indices_15, meta_15 = parse_cpi_csv(base_year=2015)
+    weights_15 = get_fixed_weights(meta_15)
+    master_15 = load_item_master(base_year=2015)
+    boj_15 = parse_boj(base_year=2015)
+
+    indices_15_adj = apply_tax_adjustment(indices_15, master_15["item_code"].tolist(), master_15)
+    indices_15_adj = apply_all_events(indices_15_adj, base_year=2015)
+
+    fig, axes = plt.subplots(3, 1, figsize=(16, 14), sharex=True)
+    fig.suptitle("CPI YoY excl. Special Factors: 2016-2026 (2015-base + 2020-base)", fontsize=14, fontweight="bold")
+
+    for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
+        adj_15 = compute_weighted_index(indices_15_adj, weights_15, series_name, master_15)
+        yoy_15 = compute_yoy(adj_15)
+        orig_15 = compute_weighted_index(indices_15, weights_15, series_name, master_15)
+        yoy_orig_15 = compute_yoy(orig_15)
+
+        adj_20 = compute_weighted_index(indices_adj, weights, series_name, master)
+        yoy_20 = compute_yoy(adj_20)
+        orig_20 = compute_weighted_index(indices, weights, series_name, master)
+        yoy_orig_20 = compute_yoy(orig_20)
+
+        boj_15_s = boj_15[boj_name]
+        boj_20_s = boj[boj_name]
+
+        def combine(s15, s20):
+            part1 = s15[(s15.index >= "2016-01") & (s15.index <= "2020-12")]
+            part2 = s20[s20.index >= "2021-01"]
+            return pd.concat([part1, part2])
+
+        yoy_orig_c = combine(yoy_orig_15, yoy_orig_20)
+        yoy_adj_c = combine(yoy_15, yoy_20)
+        boj_c = combine(boj_15_s, boj_20_s)
+
+        ax.plot(ym_to_date(yoy_orig_c.index), yoy_orig_c.values, color="#BBBBBB", linewidth=1, label="Unadjusted", linestyle="--")
+        ax.plot(ym_to_date(yoy_adj_c.index), yoy_adj_c.values, color="#2196F3", linewidth=1.8, label="Our estimates")
+        ax.plot(ym_to_date(boj_c.index), boj_c.values, color="#F44336", linewidth=1.8, label="BOJ estimates", linestyle=":")
+
+        ax.axvline(x=pd.Timestamp("2021-01"), color="gray", linewidth=0.8, linestyle="--", alpha=0.5)
+        ax.set_title(title, fontsize=11)
+        ax.set_ylabel("YoY (%)")
+        ax.legend(loc="upper left", fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color="black", linewidth=0.5)
+
+    axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    axes[-1].xaxis.set_major_locator(mdates.MonthLocator(interval=6))
+    plt.setp(axes[-1].xaxis.get_majorticklabels(), rotation=45, ha="right")
+    plt.tight_layout()
+    path4 = OUTPUT_DIR / "fig_full_period_comparison.png"
+    fig.savefig(path4, dpi=150, bbox_inches="tight")
+    print(f"保存: {path4}")
     plt.close()
 
 
