@@ -51,7 +51,7 @@ def main():
 
     # --- 図1: 3系列の前年比比較 ---
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
-    fig.suptitle("CPI YoY excl. Special Factors: Computed vs BOJ Published", fontsize=14, fontweight="bold")
+    fig.suptitle("CPI YoY excl. Special Factors: Computed vs BOJ estimates", fontsize=14, fontweight="bold")
 
     for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
         # 未調整
@@ -71,8 +71,8 @@ def main():
         boj_vals = [boj_s[ym] for ym in common]
 
         ax.plot(dates, orig_vals, color="#BBBBBB", linewidth=1, label="Unadjusted", linestyle="--")
-        ax.plot(dates, adj_vals, color="#2196F3", linewidth=1.8, label="Computed (adjusted)")
-        ax.plot(dates, boj_vals, color="#F44336", linewidth=1.8, label="BOJ Published", linestyle=":")
+        ax.plot(dates, adj_vals, color="#2196F3", linewidth=1.8, label="Our estimates")
+        ax.plot(dates, boj_vals, color="#F44336", linewidth=1.8, label="BOJ estimates", linestyle=":")
         ax.set_title(title, fontsize=11)
         ax.set_ylabel("YoY (%)")
         ax.legend(loc="upper left", fontsize=9)
@@ -90,7 +90,7 @@ def main():
 
     # --- 図2: 残差（自前計算 - 日銀公表値） ---
     fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
-    fig.suptitle("Residuals (Computed - BOJ Published, %pt)", fontsize=14, fontweight="bold")
+    fig.suptitle("Residuals (Computed - BOJ estimates, %pt)", fontsize=14, fontweight="bold")
 
     for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
         adj = compute_weighted_index(indices_adj, weights, series_name, master)
