@@ -246,6 +246,9 @@ def main():
         part_20 = yoy_20[yoy_20.index >= "2021-01"]
         yoy_adj_full = pd.concat([part_pre, part_15, part_20])
 
+        # 総務省公表 tax-adjusted (1991-2019, 全期間で表示)
+        yoy_soumu = yoy_taxadj[(yoy_taxadj.index >= "1991-01") & (yoy_taxadj.index <= "2019-12")]
+
         # Unadjusted: 2010-base (1991-2015) + 2015-base + 2020-base
         orig_15 = compute_weighted_index(indices_15, weights_15, series_name, master_15)
         yoy_orig_15 = compute_yoy(orig_15)
@@ -268,6 +271,7 @@ def main():
 
         ax.plot(ym_to_date(yoy_adj_full.index), yoy_adj_full.values, color="#2196F3", linewidth=1.2, label="Our estimates")
         ax.plot(ym_to_date(boj_c.index), boj_c.values, color="#F44336", linewidth=1.2, label="BOJ estimates", linestyle=":")
+        ax.plot(ym_to_date(yoy_soumu.index), yoy_soumu.values, color="#4CAF50", linewidth=1.0, label="Soumu tax-adjusted (1991-2019)", linestyle="-.")
 
         # Splice boundaries
         for boundary in ["2016-01", "2021-01"]:
