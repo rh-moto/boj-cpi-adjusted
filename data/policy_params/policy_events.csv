@@ -16,3 +16,5 @@ Mobile fee reduction,7430,,hold_and_step,2021-04,2022-03,,Hold period. Step auto
 GoTo Travel (2022),9300,,trend_extend,2022-10,2023-06,,Travel support. Trend extend
 GoTo Travel 2020,9300,,trend_extend,2020-08,2020-12,,GoTo period. Trend extend
 Provisional tax abolition (gasoline),7301,,tax_restore,2026-01,,27.61,25.1 yen x 1.1 (incl tax)
+HS free (public) original 2010,8020,2010.0,step,2010-04,,376.3,2010 base only. CPI step(382.2->5.9)
+HS free (private) original 2010,8030,2010.0,step,2010-04,,33.2,2010 base only. CPI step(124.9->91.7)

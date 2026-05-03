@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
+from src.policy_engine import apply_all_events
 from src.tax_adjust_pdf_spec import apply_all_tax_adjustments, compute_factor, load_tax_categories
 
 
@@ -54,6 +55,9 @@ def main():
 
     print("\nApplying tax adjustments (1997-04, 2014-04)...")
     adjusted_items = apply_all_tax_adjustments(items_df, names, events=(1997, 2014))
+
+    print("\nApplying policy events (base_year=2010)...")
+    adjusted_items = apply_all_events(adjusted_items, base_year=2010)
 
     # 出力: 品目別調整済指数
     out = adjusted_items.reset_index()
