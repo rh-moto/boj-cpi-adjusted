@@ -205,6 +205,92 @@ def main():
     print(f"保存: {path4}")
     plt.close()
 
+    # --- Fig 5: Full period extended back to 1991 (2010-base + 2015-base + 2020-base) ---
+    # Pre-2016: 公表tax_adjusted.xlsx (1990-2019, 2015基準スプライス済) を tax-adjusted の代理として使用
+    # 1990-2015年は他の特殊要因(教育/モバイル等)が無いため、tax調整=our-estimates 相当
+    tax_xlsx = pd.read_excel("data/soumu/tax_adjusted.xlsx", sheet_name="zmi", header=None)
+    tax_data = tax_xlsx.iloc[6:].copy()
+    # cols: 0=ym, 1=all, 2=core(161), 3=less_imp(163), 4=less_imp_fresh(166), 5=core_core(178), 6=boj_core(168)
+    tax_data.columns = ["ym_raw", "all", "core", "less_imp", "less_imp_fresh", "core_core", "boj_core"]
+    tax_data["ym"] = tax_data["ym_raw"].astype(str).str[:4] + "-" + tax_data["ym_raw"].astype(str).str[4:]
+    tax_adj_series = {
+        "core": pd.Series(tax_data["core"].values, index=tax_data["ym"].values, dtype=float),
+        "core_core": pd.Series(tax_data["core_core"].values, index=tax_data["ym"].values, dtype=float),
+        "boj_core": pd.Series(tax_data["boj_core"].values, index=tax_data["ym"].values, dtype=float),
+    }
+
+    # 2010基準の生CPI（未調整）: 0161=core, 0168=boj_core (core_core=0178は2010基準に存在しない)
+    cpi_2010 = pd.read_csv("data/soumu/cpi_2010base_items.csv")
+    cpi_2010["ym"] = cpi_2010["year_month"].astype(str).str[:4] + "-" + cpi_2010["year_month"].astype(str).str[4:]
+    cpi_2010 = cpi_2010.set_index("ym")
+    raw_2010 = {
+        "core": cpi_2010["0161"].astype(float),
+        "boj_core": cpi_2010["0168"].astype(float),
+        # core_core: 2010基準に該当集計符号なし
+    }
+
+    fig, axes = plt.subplots(3, 1, figsize=(18, 14), sharex=True)
+    fig.suptitle("CPI YoY excl. Special Factors: 1991-2026 (2010-base + 2015-base + 2020-base)", fontsize=14, fontweight="bold")
+
+    for ax, (series_name, (boj_name, title)) in zip(axes, boj_map.items()):
+        # Our-estimates: tax_adjusted.xlsx (1991-2015) + 2015-base pipeline (2016-2020) + 2020-base (2021+)
+        adj_15 = compute_weighted_index(indices_15_adj, weights_15, series_name, master_15)
+        yoy_15 = compute_yoy(adj_15)
+        adj_20 = compute_weighted_index(indices_adj, weights, series_name, master)
+        yoy_20 = compute_yoy(adj_20)
+        yoy_taxadj = compute_yoy(tax_adj_series[series_name])
+
+        # Splice: 1991-01..2015-12 from tax_adjusted, 2016-01..2020-12 from 2015-base, 2021-01+ from 2020-base
+        part_pre = yoy_taxadj[(yoy_taxadj.index >= "1991-01") & (yoy_taxadj.index <= "2015-12")]
+        part_15 = yoy_15[(yoy_15.index >= "2016-01") & (yoy_15.index <= "2020-12")]
+        part_20 = yoy_20[yoy_20.index >= "2021-01"]
+        yoy_adj_full = pd.concat([part_pre, part_15, part_20])
+
+        # Unadjusted: 2010-base (1991-2015) + 2015-base + 2020-base
+        orig_15 = compute_weighted_index(indices_15, weights_15, series_name, master_15)
+        yoy_orig_15 = compute_yoy(orig_15)
+        orig_20 = compute_weighted_index(indices, weights, series_name, master)
+        yoy_orig_20 = compute_yoy(orig_20)
+
+        if series_name in raw_2010:
+            yoy_raw_2010 = compute_yoy(raw_2010[series_name])
+            part_pre_raw = yoy_raw_2010[(yoy_raw_2010.index >= "1991-01") & (yoy_raw_2010.index <= "2015-12")]
+            part_15_raw = yoy_orig_15[(yoy_orig_15.index >= "2016-01") & (yoy_orig_15.index <= "2020-12")]
+            part_20_raw = yoy_orig_20[yoy_orig_20.index >= "2021-01"]
+            yoy_orig_full = pd.concat([part_pre_raw, part_15_raw, part_20_raw])
+            ax.plot(ym_to_date(yoy_orig_full.index), yoy_orig_full.values, color="#BBBBBB", linewidth=0.8, label="Unadjusted", linestyle="--")
+
+        # BOJ (2016+ only)
+        boj_c = pd.concat([
+            boj_15[boj_name][(boj_15[boj_name].index >= "2016-01") & (boj_15[boj_name].index <= "2020-12")],
+            boj[boj_name][boj[boj_name].index >= "2021-01"],
+        ])
+
+        ax.plot(ym_to_date(yoy_adj_full.index), yoy_adj_full.values, color="#2196F3", linewidth=1.2, label="Our estimates")
+        ax.plot(ym_to_date(boj_c.index), boj_c.values, color="#F44336", linewidth=1.2, label="BOJ estimates", linestyle=":")
+
+        # Splice boundaries
+        for boundary in ["2016-01", "2021-01"]:
+            ax.axvline(x=pd.Timestamp(boundary), color="gray", linewidth=0.6, linestyle="--", alpha=0.4)
+        # Tax events
+        for tax_evt in ["1997-04", "2014-04", "2019-10"]:
+            ax.axvline(x=pd.Timestamp(tax_evt), color="orange", linewidth=0.5, linestyle=":", alpha=0.4)
+
+        ax.set_title(title, fontsize=11)
+        ax.set_ylabel("YoY (%)")
+        ax.legend(loc="upper left", fontsize=9)
+        ax.grid(True, alpha=0.3)
+        ax.axhline(y=0, color="black", linewidth=0.5)
+
+    axes[-1].xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+    axes[-1].xaxis.set_major_locator(mdates.YearLocator(2))
+    plt.setp(axes[-1].xaxis.get_majorticklabels(), rotation=45, ha="right")
+    plt.tight_layout()
+    path5 = OUTPUT_DIR / "fig_full_period_1991.png"
+    fig.savefig(path5, dpi=150, bbox_inches="tight")
+    print(f"保存: {path5}")
+    plt.close()
+
 
 if __name__ == "__main__":
     main()
